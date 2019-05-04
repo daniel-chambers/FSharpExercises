@@ -115,6 +115,8 @@ let mapOptionInts : (int -> int) -> int option -> int option =
 
 
 // Given the following types and functions, write an implementation for lengthOfContent
+// You don't need to implement mapMyAsync and httpGet. The actual implementation
+// of these (and the MyAsync<'a> type) is irrelevant for the purposes of this exercise.
 type MyAsync<'a> = YouDontNeedToKnow
 type HttpResult =
   { Verb : string
@@ -131,7 +133,8 @@ let lengthOfContent : Uri -> MyAsync<int> =
     httpGet uri |> mapMyAsync (fun result -> stringLength result.Content)
 
 
-// How could you refactor refactorMe to use maps?
+// How could you refactor refactorMe to use maps? Implement your refactoring in
+// refactoredRefactorMe. You don't need to implement readFile and writeFile.
 let readFile : string -> Async<byte[]> = notImplemented ()
 let writeFile : string -> string -> Async<unit> = notImplemented ()
 
