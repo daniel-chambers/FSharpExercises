@@ -100,7 +100,7 @@ let mapOptionViaApplicative : ('a -> 'b) -> 'a option -> 'b option =
 
 
 // Implement the not implemented functions below then refactor mkAddress to use
-// functor and applicative functions for option.
+// functor and applicative functions for option into refactoredMkAddress.
 // Hint: You'll want to use the <!> and <*> operators to make it readable
 type Address =
   { StreetNumber : int
@@ -169,8 +169,7 @@ let applyResult : Result<('a -> 'b), 'e> -> Result<'a, 'e> -> Result<'b, 'e> =
     | Error e, _       -> Error e
 
 
-
-// Implement calculateCommissionAmount, where commission for an introducer is
+// Implement calculateCommissionAmount, where commission for a broker is
 // calculated as a percentage of the loan amount, with a minimum payable
 // commission of $1000 regardless of loan amount
 let calculateCommissionAmount : decimal -> decimal -> decimal =
@@ -252,6 +251,7 @@ let validateStringRequired : string -> string -> Validation<string, ValidationEr
     else
       Success str
 
+// Hint: Australian postcodes must be four digits
 let validatePostcode : string -> Validation<string, ValidationError> =
   fun str ->
     match str with
@@ -330,6 +330,7 @@ let mapAsync : ('a -> 'b) -> Async<'a> -> Async<'b> =
 // In Functor Exercises you refactored 'refactorMe' to use mapAsync
 // Using your refactored solution from last time, can you continue refactoring it
 // to use applicative functions as well as functor functions?
+// Write your refactoring into refactoredRefactorMe
 let readFile : string -> Async<byte[]> = notImplemented ()
 let writeFile : string -> string -> Async<unit> = notImplemented ()
 
@@ -498,6 +499,8 @@ let applyList : ('a -> 'b) list -> 'a list -> 'b list =
 
 // Using functor and applicative for list, generate a list of all possible loan
 // interest rate dimensions (implement 'loanInterestRateDimensions')
+// A loan interest rate defined for combinations of RiskGrade, Product and
+// LvrRange (LVR stands for Loan-to-Value Ratio).
 type RiskGrade = AAA | AA | A | BPlus | B | BMinus
 type Product = Sharp | Star | Free
 type LvrRange =
@@ -603,9 +606,13 @@ let zipToTupleList' : 'a list -> 'b list -> ('a * 'b) list =
     zipLists (fun x y -> (x,y)) xs ys
 
 
-// Implement zipSequences without cheating and converting any of the sequences to lists.
-// HINT: You may use Seq.take in order to only enumerate some of a sequence
-// without resorting to mutable variables and while loops
+// One of the powers of sequences is that they can be infinite since they can
+// be lazily generated. Implement zipSequences so that it works with infinite
+// sequences. This means you can't cheat and convert the sequences to lists!
+// HINT: Unfortunately due to the design of the IEnumerable<T> interface,
+// you'll need to use some mutability to achieve this. However, the mutability
+// is unavoidable and limited to this function, and the function will still be
+// a pure function, so we'll let it pass this time! :)
 let zipSequences : ('a -> 'b -> 'c) -> 'a seq -> 'b seq -> 'c seq =
   fun fn xs ys -> seq {
     use xsEnumerator = xs.GetEnumerator()
@@ -687,7 +694,7 @@ let indexes : int -> int seq =
 
 // Implement Seq.take yourself using your ZipList functor and applicative functions
 // HINT: you will need to use the indexes function you just implemented
-let seqTake : int -> 'a seq -> 'a seq =
+let takeSeq : int -> 'a seq -> 'a seq =
   fun count xs ->
     let inline (<!>) fn x = mapZipList fn x
     let inline (<*>) fn x = applyZipList fn x
@@ -709,7 +716,7 @@ let filterSeq : ('a -> bool) -> 'a seq -> 'a seq =
 
 
 // Implement Seq.skip yourself using your ZipList functor and applicative functions
-// HINT: use your indexes and seqFilter function
+// HINT: use your indexes and filterSeq function
 let skipSeq : int -> 'a seq -> 'a seq =
   fun count xs ->
     let inline (<!>) fn x = mapZipList fn x
