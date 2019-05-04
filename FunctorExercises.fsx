@@ -11,7 +11,7 @@ let mapOption : ('a -> 'b) -> 'a option -> 'b option =
   fun fn opt ->
     match opt with
     | Some x -> Some <| fn x
-    | None -> None
+    | None   -> None
 
 
 // Implement map for list
@@ -28,7 +28,7 @@ let mapList : ('a -> 'b) -> 'a list -> 'b list =
 let mapResult : ('a -> 'b) -> Result<'a, 'c> -> Result<'b, 'c> =
   fun fn res ->
     match res with
-    | Ok x -> Ok <| fn x
+    | Ok x    -> Ok <| fn x
     | Error e -> Error e
 
 
@@ -36,7 +36,7 @@ let mapResult : ('a -> 'b) -> Result<'a, 'c> -> Result<'b, 'c> =
 let mapResultError : ('a -> 'b) -> Result<'c, 'a> -> Result<'c, 'b> =
   fun fn res ->
     match res with
-    | Ok x -> Ok x
+    | Ok x    -> Ok x
     | Error e -> Error <| fn e
 
 
