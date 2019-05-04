@@ -89,7 +89,7 @@ let mapOptionViaApplicative : ('a -> 'b) -> 'a option -> 'b option =
 
 
 // Implement the not implemented functions below then refactor mkAddress to use
-// functor and applicative functions for option.
+// functor and applicative functions for option into refactoredMkAddress.
 // Hint: You'll want to use the <!> and <*> operators to make it readable
 type Address =
   { StreetNumber : int
@@ -116,6 +116,10 @@ let mkAddress : string -> string -> string -> string -> Address option =
     | _ ->
       None
 
+let refactoredMkAddress : string -> string -> string -> string -> Address option =
+  fun streetNo street suburb postcode ->
+    notImplemented ()
+
 
 // Copy in your implementation of Functor map for Result from Functor Exercises
 let mapResult : ('a -> 'b) -> Result<'a, 'c> -> Result<'b, 'c> =
@@ -135,12 +139,9 @@ let applyResult : Result<('a -> 'b), 'e> -> Result<'a, 'e> -> Result<'b, 'e> =
     notImplemented ()
 
 
-// Implement calculateCommissionAmount, where commission for an introducer is
+// Implement calculateCommissionAmount, where commission for a broker is
 // calculated as a percentage of the loan amount, with a minimum payable
 // commission of $1000 regardless of loan amount
-type IntroducerId = int
-type LoanId = int
-
 let calculateCommissionAmount : decimal -> decimal -> decimal =
   fun commissionPercentage loanAmount ->
     notImplemented ()
@@ -149,16 +150,18 @@ let calculateCommissionAmount : decimal -> decimal -> decimal =
 // Use the (fake) database query functions below to get the data you need
 // to perform the above commission calculation and return the amount.
 // Use the functor and applicative functions for Result to achieve this
+type BrokerId = int
+type LoanId = int
 type SqlError =
   | QueryTimeout
   | OtherError of exn
-let getCommissionPercentageForIntroducerFromDb : IntroducerId -> Result<decimal, SqlError> =
+let getCommissionPercentageForBrokerFromDb : BrokerId -> Result<decimal, SqlError> =
   fun id -> Ok 2.5m
 let getLoanAmountFromDb : LoanId -> Result<decimal, SqlError> =
   fun id -> Ok 500000m
 
-let getCommissionAmount : IntroducerId -> LoanId -> Result<decimal, SqlError> =
-  fun introducerId loanId ->
+let getCommissionAmount : BrokerId -> LoanId -> Result<decimal, SqlError> =
+  fun brokerId loanId ->
     notImplemented ()
 
 
@@ -198,9 +201,12 @@ type ValidationError =
 let validateInt : string -> string -> Validation<int, ValidationError> =
   fun name str ->
     notImplemented ()
+
 let validateStringRequired : string -> string -> Validation<string, ValidationError> =
   fun name str ->
     notImplemented ()
+
+// Hint: Australian postcodes must be four digits
 let validatePostcode : string -> Validation<string, ValidationError> =
   fun str ->
     notImplemented ()
@@ -248,6 +254,7 @@ let mapAsync : ('a -> 'b) -> Async<'a> -> Async<'b> =
 // In Functor Exercises you refactored 'refactorMe' to use mapAsync
 // Using your refactored solution from last time, can you continue refactoring it
 // to use applicative functions as well as functor functions?
+// Write your refactoring into refactoredRefactorMe
 let readFile : string -> Async<byte[]> = notImplemented ()
 let writeFile : string -> string -> Async<unit> = notImplemented ()
 
@@ -270,29 +277,40 @@ let refactorMe = async {
   return Set.count uniqueWords
 }
 
+let refactoredRefactorMe : Async<int> =
+  notImplemented ()
 
-// Implement getHardcodedUris using functor & applicative functions for async
+
+// Implement getHardcodedUris using functor & applicative functions for MyAsync
 // Note that the order of HttpResponses returned should match the order
 // of the uris
+// You don't need to implement map, pure and apply for MyAsync, nor care about
+// its implementation
+type MyAsync<'a> = YouDontNeedToKnow
 type HttpResponse = Unimportant
-let httpGet : Uri -> Async<HttpResponse> = notImplemented ()
+let mapMyAsync : ('a -> 'b) -> MyAsync<'a> -> MyAsync<'b> = fun fn x -> notImplemented ()
+let pureMyAsync : 'a -> MyAsync<'a> = fun x -> notImplemented ()
+let applyMyAsync : MyAsync<'a -> 'b> -> MyAsync<'a> -> MyAsync<'b> = fun fn x -> notImplemented ()
+let httpGet : Uri -> MyAsync<HttpResponse> = notImplemented ()
 
-let getHardcodedUris : Async<HttpResponse list> =
-  let uris = [ Uri "https://www.google.com"; Uri "https://fsharp.org"; Uri "https://portal.azure.com" ]
+let getHardcodedUris : MyAsync<HttpResponse list> =
+  let uri1 = Uri "https://www.google.com"
+  let uri2 = Uri "https://fsharp.org"
+  let uri3 = Uri "https://portal.azure.com"
   notImplemented()
 
 
-// Does your solution to getHardcodedUris generalise to an arbitrary list of Uris?
+// Can you generalise your solution to getHardcodedUris to an arbitrary list of Uris?
 // Demonstrate this by implementing getAllUris. You should only require functor and applicative
 // functions for async to do this
-let getUris : Uri list -> Async<HttpResponse list> =
+let getUris : Uri list -> MyAsync<HttpResponse list> =
   fun uris ->
     notImplemented ()
 
 
 // Can you generalise your solution further, such that it doesn't care about Uris and HttpResponses?
 // FYI: This particular function is called 'traverse'
-let traverseAsync : ('a -> Async<'b>) -> 'a list -> Async<'b list> =
+let traverseMyAsync : ('a -> MyAsync<'b>) -> 'a list -> MyAsync<'b list> =
   fun fn xs ->
     notImplemented ()
 
@@ -303,13 +321,19 @@ let traverseOption : ('a -> 'b option) -> 'a list -> 'b list option =
     notImplemented ()
 
 
-// Describe the similarities between traverseAsync and traverseOption. What is
+// Describe the similarities between traverseMyAsync and traverseOption. What is
 // different between both implementations and what is the same?
 
 
-// Sequence is a variation upon traverse. Implement this for async by reusing your traverseAsync function
-let sequenceAsync : Async<'a> list -> Async<'a list> =
+// Sequence is a variation upon traverse. Implement this for async by reusing your traverseMyAsync function
+let sequenceMyAsync : MyAsync<'a> list -> MyAsync<'a list> =
   fun listOfAsyncs ->
+    notImplemented ()
+
+
+// Copy in your implementation of functor's map for list from Functor Exercises
+let mapList : ('a -> 'b) -> 'a list -> 'b list =
+  fun fn lst ->
     notImplemented ()
 
 
@@ -327,14 +351,10 @@ let applyList : ('a -> 'b) list -> 'a list -> 'b list =
     notImplemented ()
 
 
-// Copy in your implementation of functor's map for list from Functor Exercises
-let mapList : ('a -> 'b) -> 'a list -> 'b list =
-  fun fn xs ->
-    notImplemented ()
-
-
 // Using functor and applicative for list, generate a list of all possible loan
 // interest rate dimensions (implement 'loanInterestRateDimensions')
+// A loan interest rate defined for combinations of RiskGrade, Product and
+// LvrRange (LVR stands for Loan-to-Value Ratio).
 type RiskGrade = AAA | AA | A | BPlus | B | BMinus
 type Product = Sharp | Star | Free
 type LvrRange =
@@ -408,9 +428,13 @@ let zipToTupleList' : 'a list -> 'b list -> ('a * 'b) list =
     notImplemented ()
 
 
-// Implement zipSequences without cheating and converting any of the sequences to lists.
-// HINT: You may use Seq.take in order to only enumerate some of a sequence
-// without resorting to mutable variables and while loops
+// One of the powers of sequences is that they can be infinite since they can
+// be lazily generated. Implement zipSequences so that it works with infinite
+// sequences. This means you can't cheat and convert the sequences to lists!
+// HINT: Unfortunately due to the design of the IEnumerable<T> interface,
+// you'll need to use some mutability to achieve this. However, the mutability
+// is unavoidable and limited to this function, and the function will still be
+// a pure function, so we'll let it pass this time! :)
 let zipSequences : ('a -> 'b -> 'c) -> 'a seq -> 'b seq -> 'c seq =
   fun fn xs ys ->
     notImplemented ()
@@ -457,9 +481,9 @@ let pureZipList : 'a -> ZipList<'a> =
 // Implement the following poor man's unit test to find out.
 // If your ZipList implementation fails the test, go back and fix it.
 let applicativeAndFunctorConsistencyLawTest : unit =
-  let mapResults = notImplemented ()
-  let pureThenApplyResults = notImplemented ()
-  if mapResults <> pureThenApplyResults then
+  let (ZipList mapResults) = notImplemented ()
+  let (ZipList pureThenApplyResults) = notImplemented ()
+  if Seq.toList mapResults <> Seq.toList pureThenApplyResults then
     failwithf "Oh no, your implementation is wrong! Map: %A PureThenApply: %A" mapResults pureThenApplyResults
 
 
@@ -477,19 +501,19 @@ let indexes : int -> int seq =
 
 // Implement Seq.take yourself using your ZipList functor and applicative functions
 // HINT: you will need to use the indexes function you just implemented
-let seqTake : int -> 'a seq -> 'a seq =
+let takeSeq : int -> 'a seq -> 'a seq =
   fun count xs ->
     notImplemented ()
 
 
 // Implement Seq.filter yourself using sequence expressions
-let seqFilter : ('a -> bool) -> 'a seq -> 'a seq =
+let filterSeq : ('a -> bool) -> 'a seq -> 'a seq =
   fun predicate xs ->
     notImplemented ()
 
 
 // Implement Seq.skip yourself using your ZipList functor and applicative functions
-// HINT: use your indexes and seqFilter function
-let seqSkip : int -> 'a seq -> 'a seq =
+// HINT: use your indexes and filterSeq function
+let skipSeq : int -> 'a seq -> 'a seq =
   fun count xs ->
     notImplemented ()
