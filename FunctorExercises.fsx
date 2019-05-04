@@ -38,7 +38,7 @@ let bimapResult : ('a -> 'b) -> ('c -> 'd) -> Result<'a, 'c> -> Result<'b, 'd> =
 
 // Implement map for choice 3
 let mapChoice3 : ('a -> 'b) -> Choice<'a, 'c, 'd> -> Choice<'b, 'c, 'd> =
-  fun fn lst ->
+  fun fn choice ->
     notImplemented ()
 
 
@@ -63,11 +63,16 @@ let something = None
 let somethingElse = mapOption stringLength something
 
 
-// What is another way of writing this function using less maps?
+// What is another way of writing the lists value using less maps? (Implement it in listsWithLessMaps)
+let addOne a = a + 1
+let toString x = x.ToString()
 let lists =
   [ 1; 2; 3; 4 ]
-  |> mapList ((+) 1)
-  |> mapList (fun i -> i.ToString())
+  |> mapList addOne
+  |> mapList toString
+
+let listsWithLessMaps : string list =
+  notImplemented ()
 
 
 // Is it possible to implement mapper below such that the length of outputList changes?
@@ -88,6 +93,8 @@ let mapOptionInts : (int -> int) -> int option -> int option =
 
 
 // Given the following types and functions, write an implementation for lengthOfContent
+// You don't need to implement mapMyAsync and httpGet. The actual implementation
+// of these (and the MyAsync<'a> type) is irrelevant for the purposes of this exercise.
 type MyAsync<'a> = YouDontNeedToKnow
 type HttpResult =
   { Verb : string
@@ -104,7 +111,8 @@ let lengthOfContent : Uri -> MyAsync<int> =
     notImplemented ()
 
 
-// How could you refactor refactorMe to use maps?
+// How could you refactor refactorMe to use maps? Implement your refactoring in
+// refactoredRefactorMe. You don't need to implement readFile and writeFile.
 let readFile : string -> Async<byte[]> = notImplemented ()
 let writeFile : string -> string -> Async<unit> = notImplemented ()
 
@@ -126,3 +134,6 @@ let refactorMe = async {
 
   return Set.count uniqueWords
 }
+
+let refactoredRefactorMe : Async<int> =
+  notImplemented()
