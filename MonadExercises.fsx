@@ -9,10 +9,13 @@ let notImplemented () = raise <| NotImplementedException ()
 // Implement bind for option
 let bindOption : ('a -> 'b option) -> 'a option -> 'b option =
   fun fn x ->
-    notImplemented ()
+    match x with
+    | Some x' -> fn x'
+    | None    -> None
 
 
 // Without using the compiler, what is the type of unhappinessLevel? What is its value?
+// Answer: None : int option
 let endgameSpoilers : string option = None
 let aPersonListening : string -> int option = fun spoilers -> Some spoilers.Length
 let unhappinessLevel = endgameSpoilers |> bindOption aPersonListening
@@ -21,22 +24,29 @@ let unhappinessLevel = endgameSpoilers |> bindOption aPersonListening
 // Copy in your implementation of mapOption, pureOption and applyOption from ApplicativeExercises
 let mapOption : ('a -> 'b) -> 'a option -> 'b option =
   fun fn opt ->
-    notImplemented ()
+    match opt with
+    | Some x -> Some <| fn x
+    | None   -> None
 
 let pureOption : 'a -> 'a option =
   fun x ->
-    notImplemented ()
+    Some x
 
 let applyOption : ('a -> 'b) option -> 'a option -> 'b option =
   fun fn x ->
-    notImplemented ()
+    match (fn, x) with
+    | Some fn, Some x -> Some <| fn x
+    | Some _,  None   -> None
+    | None,    _      -> None
 
 
 // To show that every monad is an applicative, implement Applicative's apply for
 // option solely using Monad's bind
 let applyOptionViaMonad : ('a -> 'b) option -> 'a option -> 'b option =
   fun fn x ->
-    notImplemented ()
+    fn |> bindOption (fun fn' ->
+      x |> bindOption (Some << fn')
+    )
 
 
 // Refactor mkFullName to use monad bind. Put your solution in mkFullNameWithBind
@@ -52,25 +62,43 @@ let mkFullName : string option -> string option -> string option =
 
 let mkFullNameWithBind : string option -> string option -> string option =
   fun firstName surname ->
-    notImplemented ()
+    firstName |> bindOption (fun f ->
+      surname |> bindOption (fun s ->
+        Some <| sprintf "%s %s" f s
+      )
+    )
 
 
 // The bind function is sometimes expressed as the operator >>=
 // Implement the >>= operator, then refactor mkFullName to use it.
 let mkFullNameWithOperator : string option -> string option -> string option =
   fun firstName surname ->
-    let inline (>>=) x fn = notImplemented ()
-    notImplemented ()
+    let inline (>>=) x fn = bindOption fn x
+    firstName >>= (fun f ->
+      surname >>= (fun s ->
+        Some <| sprintf "%s %s" f s
+      )
+    )
 
 
 // Refactor mkFullName to use applicative apply instead of monad bind.
 let refactoredMkFullName : string option -> string option -> string option =
   fun firstName surname ->
-    notImplemented ()
+    let inline (<!>) fn x = mapOption fn x
+    let inline (<*>) fn x = applyOption fn x
+    sprintf "%s %s" <!> firstName <*> surname
 
 
 // Why might it be preferrable to use applicative apply rather than
 // monad bind in the case of mkFullName?
+// Answer: Other than the code being more concise, it also clearly communicates
+// that the resultant option being Some or None entirely depends upon
+// firstName and surname, not upon what's being done with their values.
+// Another way of saying that is that `sprintf "%s %s"` does not care about
+// the option structure at all, only the values within, and the use of
+// applicative communicates this.
+// Bind implies that the action being performed may decide to change
+// the option structure for whatever reason, which is not the case here.
 
 
 // Refactor fancierMkFullName to use monad's bind. Put your solution in
@@ -93,27 +121,42 @@ let fancierMkFullName : string option -> string option -> string option =
 
 let fancierMkFullNameWithBind : string option -> string option -> string option =
   fun firstName surname ->
-    notImplemented ()
+    firstName |> bindOption (fun f ->
+      surname |> bindOption (fun s ->
+        if String.IsNullOrWhiteSpace f || String.IsNullOrWhiteSpace s then
+          None
+        else
+          Some <| sprintf "%s %s" f s
+      )
+    )
 
 
 // Can you refactor fancierMkFullName to use applicative's apply instead of
 // monad's bind? If you can, do so. If you can't, explain why.
+// Answer: You can't because the logic that uses the first name and surname
+// inside the options changes the option structure based on some logic.
+// Functions 'lifted' by applicative cannot change the applicative's structure.
+// Only a monad can do this, hence the use of bind.
 
 
 // Implement bind for Result
 let bindResult : ('a -> Result<'b, 'e>) -> Result<'a, 'e> -> Result<'b, 'e> =
   fun fn result ->
-    notImplemented ()
+    match result with
+    | Ok x    -> fn x
+    | Error e -> Error e
 
 
 // Copy in your implementations of map, pure and apply for Result from Applicative Exercises
 let mapResult : ('a -> 'b) -> Result<'a, 'e> -> Result<'b, 'e> =
   fun fn res ->
-    notImplemented ()
+    match res with
+    | Ok x    -> Ok <| fn x
+    | Error e -> Error e
 
 let pureResult : 'a -> Result<'a, 'e> =
   fun x ->
-    notImplemented ()
+    Ok x
 
 let applyResult : Result<'a -> 'b, 'e> -> Result<'a, 'e> -> Result<'b, 'e> =
   fun fn x ->
@@ -139,13 +182,16 @@ let getLoanAmountFromDb : LoanId -> Result<decimal, SqlError> =
 
 let checkCommissionPercentageForCorruption : decimal -> Result<decimal, SqlError> =
   fun commissionPercentage ->
-    notImplemented ()
+    if commissionPercentage <= 0m then
+      Error CorruptCommission
+    else
+      Ok commissionPercentage
 
 
 // Copy your calculateCommissionAmount implementation from your Applicative Exercises
 let calculateCommissionAmount : decimal -> decimal -> decimal =
   fun commissionPercentage loanAmount ->
-    notImplemented ()
+    max (commissionPercentage * loanAmount) 1000m
 
 
 // Enhance your implementation of getCommissionAmount from your Applicative Exercises
@@ -153,7 +199,12 @@ let calculateCommissionAmount : decimal -> decimal -> decimal =
 // Hint: Monad bind can help you!
 let getCommissionAmount : BrokerId -> LoanId -> Result<decimal, SqlError> =
   fun brokerId loanId ->
-    notImplemented ()
+    let inline (<!>) fn x = mapResult fn x
+    let inline (<*>) fn x = applyResult fn x
+    let inline (>>=) x fn = bindResult fn x
+    calculateCommissionAmount
+    <!> (getCommissionPercentageForBrokerFromDb brokerId >>= checkCommissionPercentageForCorruption)
+    <*> getLoanAmountFromDb loanId
 
 
 // TODO: Show that Validation is _not_ a monad
