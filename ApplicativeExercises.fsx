@@ -451,7 +451,7 @@ let zipSequences : ('a -> 'b -> 'c) -> 'a seq -> 'b seq -> 'c seq =
 // sequences. Previously you implemented applicative by creating the cross product
 // of the applied sequences. Another way is 'zipping' the applied sequences together.
 // For example:
-// (fun a b -> (a, b)) <!> [1;2] <*> [3;4;5] = [(1,4);(2,5)]
+// (fun a b -> (a, b)) <!> [1;2] <*> [3;4;5] = [(1,3);(2,4)]
 type ZipList<'a> = ZipList of 'a seq
 
 
@@ -474,13 +474,17 @@ let pureZipList : 'a -> ZipList<'a> =
 
 // One of the laws of applicatives is that functor's map and applicative's pure and apply
 // must work consistently. More specifically
-// fn <!> x
+// fn <!> lst
 // MUST produce the same results as
-// pure fn <*> x
+// pure fn <*> lst
 // Does this law hold true for your implementation of map, pure and apply?
 // Implement the following poor man's unit test to find out.
+// Note: Change `lst` to be an empty list, or a list of one thing, and see if your
+// test still passes. No matter what `lst` is, the test must pass.
 // If your ZipList implementation fails the test, go back and fix it.
 let applicativeAndFunctorConsistencyLawTest : unit =
+  let fn x = x + 2
+  let lst = ZipList [1;2]
   let (ZipList mapResults) = notImplemented ()
   let (ZipList pureThenApplyResults) = notImplemented ()
   if Seq.toList mapResults <> Seq.toList pureThenApplyResults then
