@@ -13,9 +13,12 @@ type MyList<'a> =
 // The repeat function creates a list that contains the `x` parameter `count` times.
 // eg. repeat 3 "a" = Cons ("a",Cons ("a",Cons ("a",EndOfList)))
 // Implement this function using recursion.
-let repeat : int -> 'a -> MyList<'a> =
+let rec repeat : int -> 'a -> MyList<'a> =
   fun count x ->
-    notImplemented ()
+    if count = 0 then
+      EndOfList
+    else
+      Cons (x, repeat (count - 1) x)
 
 
 // Is your function tail recursive? You can check by using a large count number
@@ -25,15 +28,24 @@ let repeat : int -> 'a -> MyList<'a> =
 // for comparison.
 let repeatTailRecursive : int -> 'a -> MyList<'a> =
   fun count x ->
-    notImplemented ()
+    let rec step count' lst =
+      if count' = 0 then
+        lst
+      else
+        step (count' - 1) (Cons (x, lst))
+
+    step count EndOfList
 
 
 // Implement `countDownFrom` which counts down to zero from the number you pass in
 // using recursion.
 // eg. countDownFrom 3 = Cons (3,Cons (2,Cons (1,Cons (0,EndOfList))))
-let countDownFrom : int -> MyList<int> =
+let rec countDownFrom : int -> MyList<int> =
   fun start ->
-    notImplemented ()
+    if start = -1 then
+      EndOfList
+    else
+      Cons (start, countDownFrom (start - 1))
 
 
 // Is your `countDownFrom` tail recursive? If not, make it so below.
@@ -41,14 +53,22 @@ let countDownFrom : int -> MyList<int> =
 // your previous one to be _not_ tail recusive for comparison.
 let countDownFromTailRecursive : int -> MyList<int> =
   fun start ->
-    notImplemented ()
+    let rec step index lst =
+      if index > start then
+        lst
+      else
+        step (index + 1) (Cons (index, lst))
+
+    step 0 EndOfList
 
 
 // Implement the sum function that adds up all the ints in the list
 // and returns the total. Use recursion.
-let sum : MyList<int> -> int =
+let rec sum : MyList<int> -> int =
   fun ints ->
-    notImplemented ()
+    match ints with
+    | Cons (x, rest) -> x + sum rest
+    | EndOfList      -> 0
 
 
 // Make your `sum` tail recursive if it is not already.
@@ -56,14 +76,24 @@ let sum : MyList<int> -> int =
 // your previous one to be _not_ tail recusive for comparison.
 let sumTailRecursive : MyList<int> -> int =
   fun ints ->
-    notImplemented ()
+    let rec step ints' accumulator =
+      match ints' with
+      | Cons (x, rest) -> step rest (x + accumulator)
+      | EndOfList      -> accumulator
+
+    step ints 0
 
 
 // Implement a function that takes a list and returns it in reverse
 // order. Make sure your implementation is tail recursive.
 let reverseList : MyList<'a> -> MyList<'a> =
   fun lst ->
-    notImplemented ()
+    let rec step lst' accumulator =
+      match lst' with
+      | Cons (x, rest) -> step rest (Cons (x, accumulator))
+      | EndOfList      -> accumulator
+
+    step lst EndOfList
 
 
 // Implement the partition function using tail recursion. Partition uses a
@@ -75,7 +105,17 @@ let reverseList : MyList<'a> -> MyList<'a> =
 // HINT: You will need to use your reverseList function
 let partition : ('a -> bool) -> MyList<'a> -> MyList<'a> * MyList<'a> =
   fun predicate lst ->
-    notImplemented ()
+    let rec step lst' first second =
+      match lst' with
+      | Cons (x, rest) ->
+        if predicate x then
+          step rest (Cons (x, first)) second
+        else
+          step rest first (Cons (x, second))
+      | EndOfList ->
+        (first, second)
+
+    step (reverseList lst) EndOfList EndOfList
 
 
 // You might have noticed a common way all these different tail-recursive functions work.
@@ -85,25 +125,36 @@ let partition : ('a -> bool) -> MyList<'a> -> MyList<'a> * MyList<'a> =
 // Implement the fold function for MyList, tail recursively.
 let fold : ('state -> 'a -> 'state) -> 'state -> MyList<'a> -> 'state =
   fun folder initialState lst ->
-    notImplemented ()
+    let rec step lst' state =
+      match lst' with
+      | Cons (x, rest) -> step rest (folder state x)
+      | EndOfList      -> state
+
+    step lst initialState
 
 
 // Reimplement sum using fold
 let sumUsingFold : MyList<int> -> int =
   fun lst ->
-    notImplemented ()
+    fold (+) 0 lst
 
 
 // Reimplement reverseList using fold
 let reverseListUsingFold : MyList<'a> -> MyList<'a> =
   fun lst ->
-    notImplemented ()
+    fold (fun s x -> Cons (x, s)) EndOfList lst
 
 
 // Reimplement partition using fold
 let partitionUsingFold : ('a -> bool) -> MyList<'a> -> MyList<'a> * MyList<'a> =
   fun predicate lst ->
-    notImplemented ()
+    let folder (first, second) x =
+      if predicate x then
+        ((Cons (x, first)), second)
+      else
+        (first, (Cons (x, second)))
+
+    fold folder (EndOfList, EndOfList) (reverseList lst)
 
 
 // A different version of partition that would indicate its behaviour better
@@ -112,20 +163,36 @@ let partitionUsingFold : ('a -> bool) -> MyList<'a> -> MyList<'a> * MyList<'a> =
 // Implement this function using a fold.
 let betterPartition : ('a -> Choice<'b,'c,'d>) -> MyList<'a> -> MyList<'b> * MyList<'c> * MyList<'d> =
   fun makeChoice lst ->
-    notImplemented ()
+    let folder (first, second, third) x =
+      match makeChoice x with
+      | Choice1Of3 b ->
+        ((Cons (b, first)), second, third)
+      | Choice2Of3 c ->
+        (first, (Cons (c, second)), third)
+      | Choice3Of3 d ->
+        (first, second, (Cons (d, third)))
+
+    fold folder (EndOfList, EndOfList, EndOfList) (reverseList lst)
+
 
 // Folds are not limited to linked lists. You can fold over many different types.
 // Write a fold for an array using tail recursion.
 let foldArray : ('state -> 'a -> 'state) -> 'state -> 'a[] -> 'state =
   fun folder initialState arr ->
-    notImplemented ()
+    let rec step index state =
+      if index < arr.Length then
+        step (index + 1) (folder state arr.[index])
+      else
+        state
+
+    step 0 initialState
 
 
 // Write an array to MyList function using your foldArray function. The
 // order of items in the array must be preserved.
 let arrayToMyList : 'a[] -> MyList<'a> =
   fun arr ->
-    notImplemented ()
+    foldArray (fun s x -> Cons (x, s)) EndOfList arr |> reverseList
 
 
 // This is a weird (but simple) one. Write a fold for the option type.
@@ -133,7 +200,9 @@ let arrayToMyList : 'a[] -> MyList<'a> =
 // that the concept of a fold generalises beyond just lists.
 let foldOption : ('state -> 'a -> 'state) -> 'state -> 'a option -> 'state =
   fun folder initialState opt ->
-    notImplemented ()
+    match opt with
+    | Some x -> folder initialState x
+    | None   -> initialState
 
 
 // Implement the 'defaultValue' function using your foldOption function
@@ -141,4 +210,4 @@ let foldOption : ('state -> 'a -> 'state) -> 'state -> 'a option -> 'state =
 //     defaultValue 12 (Some 1) = 1
 let defaultValue : 'a -> 'a option -> 'a =
   fun def opt ->
-    notImplemented ()
+    foldOption (fun _ x -> x) def opt
