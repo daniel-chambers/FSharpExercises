@@ -703,11 +703,11 @@ let takeSeq : int -> 'a seq -> 'a seq =
     let inline (<!>) fn x = mapZipList fn x
     let inline (<*>) fn x = applyZipList fn x
 
-    let (ZipList indexedXs) =
-      (fun i x -> (i,x))
+    let (ZipList takenXs) =
+      (fun _ x -> x)
       <!> ZipList (indexes count)
       <*> ZipList xs
-    mapSeq snd indexedXs
+    takenXs
 
 
 // Implement Seq.filter yourself using sequence expressions
