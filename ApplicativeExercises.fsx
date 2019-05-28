@@ -255,8 +255,8 @@ let mapAsync : ('a -> 'b) -> Async<'a> -> Async<'b> =
 // Using your refactored solution from last time, can you continue refactoring it
 // to use applicative functions as well as functor functions?
 // Write your refactoring into refactoredRefactorMe
-let readFile : string -> Async<byte[]> = notImplemented ()
-let writeFile : string -> string -> Async<unit> = notImplemented ()
+let readFile : string -> Async<byte[]> = fun file -> notImplemented ()
+let writeFile : string -> string -> Async<unit> = fun filename contents -> notImplemented ()
 
 let refactorMe = async {
   let! bytes = readFile @"C:\Temp\Nice file.txt"
@@ -291,7 +291,7 @@ type HttpResponse = Unimportant
 let mapMyAsync : ('a -> 'b) -> MyAsync<'a> -> MyAsync<'b> = fun fn x -> notImplemented ()
 let pureMyAsync : 'a -> MyAsync<'a> = fun x -> notImplemented ()
 let applyMyAsync : MyAsync<'a -> 'b> -> MyAsync<'a> -> MyAsync<'b> = fun fn x -> notImplemented ()
-let httpGet : Uri -> MyAsync<HttpResponse> = notImplemented ()
+let httpGet : Uri -> MyAsync<HttpResponse> = fun uri -> notImplemented ()
 
 let getHardcodedUris : MyAsync<HttpResponse list> =
   let uri1 = Uri "https://www.google.com"

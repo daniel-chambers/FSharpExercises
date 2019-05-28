@@ -103,7 +103,7 @@ type HttpResult =
     Content : string }
 
 let mapMyAsync : ('a -> 'b) -> MyAsync<'a> -> MyAsync<'b> = fun fn x -> notImplemented ()
-let httpGet : Uri -> MyAsync<HttpResult> = notImplemented ()
+let httpGet : Uri -> MyAsync<HttpResult> = fun uri -> notImplemented ()
 let stringLength' : string -> int = String.length
 
 let lengthOfContent : Uri -> MyAsync<int> =
@@ -113,8 +113,8 @@ let lengthOfContent : Uri -> MyAsync<int> =
 
 // How could you refactor refactorMe to use maps? Implement your refactoring in
 // refactoredRefactorMe. You don't need to implement readFile and writeFile.
-let readFile : string -> Async<byte[]> = notImplemented ()
-let writeFile : string -> string -> Async<unit> = notImplemented ()
+let readFile : string -> Async<byte[]> = fun filename -> notImplemented ()
+let writeFile : string -> string -> Async<unit> = fun filename contents -> notImplemented ()
 
 let refactorMe = async {
   let! bytes = readFile @"C:\Temp\Nice file.txt"
