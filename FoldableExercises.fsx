@@ -2,8 +2,6 @@ open System
 
 let notImplemented () = raise <| NotImplementedException ()
 
-// Try to do each of these without using the compiler, then check your result
-// after you've written it. This means don't use VSCode with Ionide either ;)
 
 type MyList<'a> =
   | Cons of 'a * MyList<'a>
