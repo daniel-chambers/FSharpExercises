@@ -481,16 +481,20 @@ let joinList : 'a list list -> 'a list =
 // Before continuing copy in your mapAsync, pureAsync and applyAsync implementations
 // from Applicative Exercises
 let pureAsync : 'a -> Async<'a> =
-  fun x ->
-    notImplemented ()
+  fun x -> async.Return x
 
 let applyAsync : Async<'a -> 'b> -> Async<'a> -> Async<'b> =
-  fun fn x ->
-    notImplemented ()
+  fun fn x -> async {
+    let! fn' = fn
+    let! x' = x
+    return fn' x'
+  }
 
 let mapAsync : ('a -> 'b) -> Async<'a> -> Async<'b> =
-  fun fn x ->
-    notImplemented ()
+  fun fn x -> async {
+    let! x' = x
+    return fn x'
+  }
 
 let bindAsync : ('a -> Async<'b>) -> Async<'a> -> Async<'b> = fun fn x -> async.Bind (x, fn)
 let readFile : string -> Async<byte[]> = fun file -> notImplemented ()
@@ -580,21 +584,23 @@ type AsyncResult<'Result, 'Error> = AsyncResult of Async<Result<'Result, 'Error>
 // Implement Functor's map for AsyncResult.
 // HINT: You can reuse mapAsync and mapResult to do this!
 let mapAsyncResult : ('a -> 'b) -> AsyncResult<'a, 'e> -> AsyncResult<'b, 'e> =
-  fun fn x ->
-    notImplemented ()
+  fun fn (AsyncResult x) ->
+    AsyncResult <| mapAsync (mapResult fn) x
 
 
 // Copy in your mapResultError implementation from Functor Exercises
 let mapResultError : ('a -> 'b) -> Result<'c, 'a> -> Result<'c, 'b> =
   fun fn res ->
-    notImplemented ()
+    match res with
+    | Ok x    -> Ok x
+    | Error e -> Error <| fn e
 
 
 // Let's also implement map for the Error side of the Result.
 // HINT: Your mapResultError from above will be useful!
 let mapErrorAsyncResult : ('e1 -> 'e2) -> AsyncResult<'a, 'e1> -> AsyncResult<'a, 'e2> =
-  fun fn x ->
-    notImplemented ()
+  fun fn (AsyncResult x) ->
+    AsyncResult <| mapAsync (mapResultError fn) x
 
 
 // Since AsyncResult is a Monad, it is also an Applicative!
@@ -602,28 +608,37 @@ let mapErrorAsyncResult : ('e1 -> 'e2) -> AsyncResult<'a, 'e1> -> AsyncResult<'a
 // HINT: You can reuse pureAsync and pureResult to do this
 let pureAsyncResult : 'a -> AsyncResult<'a, 'e> =
   fun x ->
-    notImplemented ()
+    AsyncResult << pureAsync <| pureResult x
 
 
 // We need a way of constructing an error AsyncResult value.
 // Implement errorAsyncResult below
 let errorAsyncResult : 'e -> AsyncResult<'a, 'e> =
   fun error ->
-    notImplemented ()
+    AsyncResult << pureAsync <| Error error
 
 
 // Implement Applicative's apply for AsyncResult
 // HINT: You can reuse mapAsync, applyAsync, and applyResult to do this
 let applyAsyncResult : AsyncResult<('a -> 'b), 'e> -> AsyncResult<'a, 'e> -> AsyncResult<'b, 'e> =
-  fun fn x ->
-    notImplemented ()
+  fun (AsyncResult fn) (AsyncResult x) ->
+    let inline (<!>) fn x = mapAsync fn x
+    let inline (<*>) fn x = applyAsync fn x
+    AsyncResult (applyResult <!> fn <*> x)
 
 
 // Implement Monad's bind for AsyncResult
 // HINT: You can use async computation expressions to do this
 let bindAsyncResult : ('a -> AsyncResult<'b, 'e>) -> AsyncResult<'a, 'e> -> AsyncResult<'b, 'e> =
-  fun fn x ->
-    notImplemented ()
+  fun fn (AsyncResult x) ->
+    AsyncResult <| async {
+      match! x with
+      | Ok a ->
+        let (AsyncResult r) = fn a
+        return! r
+      | Error e ->
+        return Error e
+    }
 
 
 // We need a way of converting an Async into an AsyncResult, preferrably
@@ -631,14 +646,20 @@ let bindAsyncResult : ('a -> AsyncResult<'b, 'e>) -> AsyncResult<'a, 'e> -> Asyn
 // Implement asyncResultFromAsync
 let asyncResultFromAsync : Async<'a> -> AsyncResult<'a, Exception> =
   fun a ->
-    notImplemented ()
+    AsyncResult <| async {
+      try
+        let! a' = a
+        return Ok a'
+      with
+      | e -> return Error e
+    }
 
 
 // We will also want a way of getting an AsyncResult from a Result
 // Implement asyncResultFromResult
 let asyncResultFromResult : Result<'a, 'e> -> AsyncResult<'a, 'e> =
   fun result ->
-    notImplemented ()
+    AsyncResult <| pureAsync result
 
 
 // We're going to build a function that:
@@ -660,36 +681,56 @@ type Error =
 
 let readFileAsyncResult : string -> AsyncResult<byte[], Error> =
   fun filename ->
-    notImplemented ()
+    asyncResultFromAsync (readFile filename)
+    |> mapErrorAsyncResult (fun e -> FileIOError (filename, e))
 
 let writeStringFileAsyncResult : string -> string -> AsyncResult<unit, Error> =
   fun filename contents ->
-    notImplemented ()
+    asyncResultFromAsync (writeStringFile filename contents)
+    |> mapErrorAsyncResult (fun e -> FileIOError (filename, e))
 
 
 // Write a function that reads from a file and returns an array of the lines in that file
 let readLinesFromFile : string -> AsyncResult<string[], Error> =
   fun filename ->
-    notImplemented ()
+    readFileAsyncResult filename
+    |> mapAsyncResult (fun bytes ->
+      let text = System.Text.Encoding.UTF8.GetString bytes
+      text.Split ([|Environment.NewLine|], StringSplitOptions.None)
+    )
 
 
 // Write a function that validates a line to ensure it is not empty (or whitespace).
 // The error should be the line number if it fails
 let validateLineIsNonEmpty : int -> string -> Validation<string, int> =
   fun lineNumber line ->
-    notImplemented ()
+    if String.IsNullOrWhiteSpace line then
+      Failure <| Set.singleton lineNumber
+    else
+      Success line
 
 
 // Implement traverse for validation. (You're going to need it shortly!)
 let traverseValidation : ('a -> Validation<'b, 'e>) -> 'a list -> Validation<'b list, 'e> =
   fun fn xs ->
-    notImplemented ()
+    let inline (<!>) fn x = mapValidation fn x
+    let inline (<*>) fn x = applyValidation fn x
+    let inline cons x xs = x :: xs
+
+    let rec step xs' result =
+      match xs' with
+      | x :: rest -> step rest (cons <!> fn x <*> result)
+      | []        -> result
+
+    List.rev <!> step xs (pureValidation [])
 
 
 // Write a function that can create a Result from a Validation
 let resultFromValidation : Validation<'a, 'e> -> Result<'a, 'e Set> =
   fun validation ->
-    notImplemented ()
+    match validation with
+    | Success a -> Ok a
+    | Failure e -> Error e
 
 
 // Implement a function that can validate a sequence of lines to ensure they are all
@@ -698,13 +739,18 @@ let resultFromValidation : Validation<'a, 'e> -> Result<'a, 'e Set> =
 // HINT: You'll want to use Seq.mapi, and the functions you just defined above
 let validateAllLinesAreNonEmpty : string seq -> Result<string list, Error> =
   fun lines ->
-    notImplemented ()
+    lines
+    |> Seq.mapi validateLineIsNonEmpty
+    |> Seq.toList
+    |> traverseValidation id
+    |> resultFromValidation
+    |> Result.mapError EmptyLines
 
 
 // Implement a function that counts the number of words in a line of text
 let countWordsInLine : string -> int =
   fun line ->
-    notImplemented ()
+    line.Split([|' '|], StringSplitOptions.RemoveEmptyEntries).Length
 
 
 // Implement a function that takes a sequence of lines, counts the words in each one
@@ -712,7 +758,8 @@ let countWordsInLine : string -> int =
 // eg. wordCountsPerLine ["this is"; "getting more complex"; "but challenge is good"] = "2\r\n3\r\n4"
 let wordCountsPerLine : string seq -> string =
   fun lines ->
-    notImplemented ()
+    let counts = lines |> Seq.map countWordsInLine
+    String.Join (Environment.NewLine, counts)
 
 
 // Let's now implement our main function, composing all our functions together.
@@ -725,7 +772,9 @@ let wordCountsPerLine : string seq -> string =
 // your AsyncResult bind function to do this!
 let readFileAndSaveLineWordCounts : string -> string -> AsyncResult<unit, Error> =
   fun inputFilename outputFilename ->
-    notImplemented ()
+    readLinesFromFile inputFilename
+    |> bindAsyncResult (validateAllLinesAreNonEmpty >> asyncResultFromResult)
+    |> bindAsyncResult (wordCountsPerLine >> writeStringFileAsyncResult outputFilename)
 
 
 // We can implement our own computation expression for AsyncResult to make using it
@@ -737,16 +786,16 @@ let readFileAndSaveLineWordCounts : string -> string -> AsyncResult<unit, Error>
 // You'll need to implement the notImplemented () methods on the AsyncResultBuilder class below.
 type AsyncResultBuilder () =
   member _this.Bind (x : AsyncResult<'a, 'e>, fn : 'a -> AsyncResult<'b, 'e>) : AsyncResult<'b, 'e> =
-    notImplemented ()
+    bindAsyncResult fn x
 
   member _this.Return (x : 'a) : AsyncResult<'a, 'e> =
-    notImplemented ()
+    pureAsyncResult x
 
   member _this.ReturnFrom (x : AsyncResult<'a, 'e>) : AsyncResult<'a, 'e> =
     x
 
   member _this.Zero () : AsyncResult<unit, 'e> =
-    notImplemented ()
+    pureAsyncResult ()
 
 let asyncResult = AsyncResultBuilder ()
 
@@ -755,7 +804,9 @@ let asyncResult = AsyncResultBuilder ()
 // using let bangs!
 let readFileAndSaveLineWordCountsWithComputationExpression : string -> string -> AsyncResult<unit, Error> =
   fun inputFilename outputFilename -> asyncResult {
-    notImplemented ()
+    let! lines = readLinesFromFile inputFilename
+    let! validatedLines = lines |> validateAllLinesAreNonEmpty |> asyncResultFromResult
+    return! validatedLines |> wordCountsPerLine |> writeStringFileAsyncResult outputFilename
   }
 
 
