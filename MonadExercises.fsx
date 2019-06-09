@@ -157,7 +157,7 @@ let fancierMkFullNameWithBind : string option -> string option -> string option 
 // Implement a join function for the option type, using bindOption:
 let joinOption : 'a option option -> 'a option =
   fun nestedOption ->
-    notImplemented ()
+    bindOption id nestedOption
 
 
 // Implement bind for Result
@@ -239,36 +239,51 @@ type Validation<'a, 'e when 'e : comparison>  =
 
 let brokenBindValidation : ('a -> Validation<'b, 'e>) -> Validation<'a, 'e> -> Validation<'b, 'e> =
   fun fn x ->
-    notImplemented ()
+    match x with
+    | Success a -> fn a
+    | Failure e -> Failure e
 
 
 // Copy in your implementations of mapValidation, pureValidation, applyValidation
 // and validateStringRequired from Applicative Exercises
 let mapValidation : ('a -> 'b) -> Validation<'a, 'e> -> Validation<'b, 'e> =
   fun fn x ->
-    notImplemented ()
+    match x with
+    | Success x -> Success <| fn x
+    | Failure e -> Failure e
 
 let pureValidation : 'a -> Validation<'a, 'e> =
   fun x ->
-    notImplemented ()
+    Success x
 
 let applyValidation : Validation<('a -> 'b), 'e> -> Validation<'a, 'e> -> Validation<'b, 'e> =
   fun fn x ->
-    notImplemented ()
+    match (fn, x) with
+    | Success fn, Success x  -> Success <| fn x
+    | Success _,  Failure e  -> Failure e
+    | Failure e,  Success _  -> Failure e
+    | Failure e1, Failure e2 -> Failure (Set.union e1 e2)
 
 type ValidationError =
   | Required of name : string
 
 let validateStringRequired : string -> string -> Validation<string, ValidationError> =
   fun name str ->
-    notImplemented ()
+    if String.IsNullOrWhiteSpace str then
+      Failure << Set.singleton <| Required name
+    else
+      Success str
 
 
 // Implement applyValidation using your brokenBindValidation implementation as
 // applyValidationViaBrokenBind below
 let applyValidationViaBrokenBind : Validation<('a -> 'b), 'e> -> Validation<'a, 'e> -> Validation<'b, 'e> =
   fun fn x ->
-    notImplemented ()
+    fn |> brokenBindValidation (fun fn' ->
+      x |> brokenBindValidation (fun x' ->
+        Success <| fn' x'
+      )
+    )
 
 
 // Remember, one of the Monad laws is that if you implement Applicative's apply using bind
@@ -303,31 +318,54 @@ let applicativeRelationLawForValidationTest : string =
 
 
 // Can you explain why the test failed?
+// Answer: It fails because using bind to implement apply ends up throwing away
+// the errors in the Failure case from either the fn or the argument in apply
+// instead of accumulating the errors.
 
 
 // Could you think of a way to fix applyValidationViaBrokenBind so that the test passes?
 // If so, demonstrate how. If not, explain why not.
+// Answer: No, you cannot. Using bind means that you cannot access the error information
+// in the Failure case in order to combine it into a new Failure case, which makes it
+// impossible to accumulate errors.
 
 
 // Implement bind for list
 let bindList : ('a -> 'b list) -> 'a list -> 'b list =
   fun fn xs ->
-    notImplemented ()
+    let rec step lst acc =
+      match lst with
+      | h :: t -> step t <| fn h :: acc
+      | []     -> acc
+
+    step xs [] |> List.rev |> List.concat
 
 
 // Copy in your implementations for mapList, pureList and applyList (the cross-product one)
 // from Applicative Exercises:
 let mapList : ('a -> 'b) -> 'a list -> 'b list =
   fun fn lst ->
-    notImplemented ()
+    let rec step lst' result =
+      match lst' with
+      | x :: xs -> step xs (fn x :: result)
+      | []      -> result
+    step lst [] |> List.rev
 
 let pureList : 'a -> 'a list =
-  fun x ->
-    notImplemented ()
+  fun x -> [x]
 
 let applyList : ('a -> 'b) list -> 'a list -> 'b list =
   fun fns xs ->
-    notImplemented ()
+    let rec step f ys result =
+      match ys with
+      | y :: rest -> step f rest (f y result)
+      | []        -> result
+
+    let applyFns fn fnResults =
+      step (fun x xResults -> fn x :: xResults) xs [] @ fnResults
+
+    step applyFns fns []
+    |> List.rev
 
 
 // Another Monad law that must be satified that is the "right identity" law
@@ -405,7 +443,12 @@ let animes : Map<Decade, Anime list> =
 
 let getAnimesForDecades : Decade list -> Anime list =
   fun decades ->
-    notImplemented ()
+    decades
+    |> bindList (fun decade ->
+      animes
+      |> Map.tryFind decade
+      |> Option.defaultValue []
+    )
 
 
 // As list is a Monad, you can implement the nested-monad flattening
@@ -416,7 +459,7 @@ let getAnimesForDecades : Decade list -> Anime list =
 // Implement joinList using bindList
 let joinList : 'a list list -> 'a list =
   fun lists ->
-    notImplemented ()
+    bindList id lists
 
 
 // The built-in Async type in F# is a monad! In fact, the async computation
@@ -453,7 +496,13 @@ let copyFile : string -> string -> Async<int> =
 
 let desugaredCopyFile : string -> string -> Async<int> =
   fun source destination ->
-    notImplemented ()
+    readFile source
+    |> bindAsync (fun contents ->
+      writeFile destination contents
+      |> bindAsync (fun _ ->
+        pureAsync contents.Length
+      )
+    )
 
 
 // As you can probably see, computation expressions are a great way of using
@@ -481,7 +530,27 @@ let refactorMe = async {
 
 let derefactorMe : unit -> Async<int> =
   fun () ->
-    notImplemented ()
+    readFile @"C:\Temp\Nice file.txt"
+    |> bindAsync (fun bytes ->
+      let decodedFile = System.Text.Encoding.UTF8.GetString bytes
+      let wordsFromFile = decodedFile.Split ([|' '|], StringSplitOptions.RemoveEmptyEntries)
+
+      readFile @"C:\Temp\Another nice file.txt"
+      |> bindAsync (fun bytes2 ->
+        let decodedFile2 = System.Text.Encoding.UTF8.GetString bytes2
+        let wordsFromFile2 = decodedFile2.Split ([|' '|], StringSplitOptions.RemoveEmptyEntries)
+
+        let uniqueWords =
+          Seq.append wordsFromFile wordsFromFile2
+          |> Set.ofSeq
+
+        String.Join (Environment.NewLine, uniqueWords)
+        |> writeStringFile (@"C:\Temp\All unique words.txt")
+        |> bindAsync (fun _ ->
+          pureAsync <| Set.count uniqueWords
+        )
+      )
+    )
 
 
 // TODO: Create AsyncResult monad
