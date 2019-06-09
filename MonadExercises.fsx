@@ -383,11 +383,26 @@ let joinList : 'a list list -> 'a list =
 // |> bindAsync (fun contents ->
 //   pureAsync contents.Length
 // )
+//
+// Before continuing copy in your mapAsync, pureAsync and applyAsync implementations
+// from Applicative Exercises
+let pureAsync : 'a -> Async<'a> =
+  fun x ->
+    notImplemented ()
+
+let applyAsync : Async<'a -> 'b> -> Async<'a> -> Async<'b> =
+  fun fn x ->
+    notImplemented ()
+
+let mapAsync : ('a -> 'b) -> Async<'a> -> Async<'b> =
+  fun fn x ->
+    notImplemented ()
+
 let bindAsync : ('a -> Async<'b>) -> Async<'a> -> Async<'b> = fun fn x -> async.Bind (x, fn)
-let pureAsync : 'a -> Async<'a> = async.Return
 let readFile : string -> Async<byte[]> = fun file -> notImplemented ()
 let writeFile : string -> byte[] -> Async<unit> = fun filename contents -> notImplemented ()
 let writeStringFile : string -> string -> Async<unit> = fun filename contents -> notImplemented ()
+
 
 // For the sake of understanding what's going on under the covers with
 // the async computation expression, and to see how async is really just a monad,
@@ -433,5 +448,195 @@ let derefactorMe : unit -> Async<int> =
     notImplemented ()
 
 
-// TODO: Create AsyncResult monad
+// A very useful monad to have in your toolbox in the modern area of 'async-everything'
+// is the AsyncResult monad, which is a combination of the Async and Result type.
+// This monad is able to perform actions asynchronously, but also has Result's behaviour
+// of short circuiting execution when something fails and capturing that error in the
+// type
+type AsyncResult<'Result, 'Error> = AsyncResult of Async<Result<'Result, 'Error>>
+
+
+// Since AsyncResult is a Monad, it is also a Functor!
+// Implement Functor's map for AsyncResult.
+// HINT: You can reuse mapAsync and mapResult to do this!
+let mapAsyncResult : ('a -> 'b) -> AsyncResult<'a, 'e> -> AsyncResult<'b, 'e> =
+  fun fn x ->
+    notImplemented ()
+
+
+// Copy in your mapResultError implementation from Functor Exercises
+let mapResultError : ('a -> 'b) -> Result<'c, 'a> -> Result<'c, 'b> =
+  fun fn res ->
+    notImplemented ()
+
+
+// Let's also implement map for the Error side of the Result.
+// HINT: Your mapResultError from above will be useful!
+let mapErrorAsyncResult : ('e1 -> 'e2) -> AsyncResult<'a, 'e1> -> AsyncResult<'a, 'e2> =
+  fun fn x ->
+    notImplemented ()
+
+
+// Since AsyncResult is a Monad, it is also an Applicative!
+// Implement Applicative's pure for AsyncResult
+// HINT: You can reuse pureAsync and pureResult to do this
+let pureAsyncResult : 'a -> AsyncResult<'a, 'e> =
+  fun x ->
+    notImplemented ()
+
+
+// We need a way of constructing an error AsyncResult value.
+// Implement errorAsyncResult below
+let errorAsyncResult : 'e -> AsyncResult<'a, 'e> =
+  fun error ->
+    notImplemented ()
+
+
+// Implement Applicative's apply for AsyncResult
+// HINT: You can reuse mapAsync, applyAsync, and applyResult to do this
+let applyAsyncResult : AsyncResult<('a -> 'b), 'e> -> AsyncResult<'a, 'e> -> AsyncResult<'b, 'e> =
+  fun fn x ->
+    notImplemented ()
+
+
+// Implement Monad's bind for AsyncResult
+// HINT: You can use async computation expressions to do this
+let bindAsyncResult : ('a -> AsyncResult<'b, 'e>) -> AsyncResult<'a, 'e> -> AsyncResult<'b, 'e> =
+  fun fn x ->
+    notImplemented ()
+
+
+// We need a way of converting an Async into an AsyncResult, preferrably
+// one that captures any IO errors in the AsyncResult error type.
+// Implement asyncResultFromAsync
+let asyncResultFromAsync : Async<'a> -> AsyncResult<'a, Exception> =
+  fun a ->
+    notImplemented ()
+
+
+// We will also want a way of getting an AsyncResult from a Result
+// Implement asyncResultFromResult
+let asyncResultFromResult : Result<'a, 'e> -> AsyncResult<'a, 'e> =
+  fun result ->
+    notImplemented ()
+
+
+// We're going to build a function that:
+// - Reads from UTF-8 text from a file and breaks it into lines
+// - Validates that each line is not empty
+// - Counts the number of words on each line
+// - Writes these counts out to another file
+// This function will handle errors explicitly in the types.
+// Let's build up a library of functions that we will compose together
+// to do this.
+
+// Adapt the readFile and writeStringFile functions from above into
+// AsyncResult versions that capture any IO exceptions into the
+// FileIOError error defined above.
+// Put your implementations into readFileAsyncResult and writeStringFileAsyncResult
+type Error =
+  | FileIOError of filename : string * error : Exception
+  | EmptyLines of lineNumbers : int Set
+
+let readFileAsyncResult : string -> AsyncResult<byte[], Error> =
+  fun filename ->
+    notImplemented ()
+
+let writeStringFileAsyncResult : string -> string -> AsyncResult<unit, Error> =
+  fun filename contents ->
+    notImplemented ()
+
+
+// Write a function that reads from a file and returns an array of the lines in that file
+let readLinesFromFile : string -> AsyncResult<string[], Error> =
+  fun filename ->
+    notImplemented ()
+
+
+// Write a function that validates a line to ensure it is not empty (or whitespace).
+// The error should be the line number if it fails
+let validateLineIsNonEmpty : int -> string -> Validation<string, int> =
+  fun lineNumber line ->
+    notImplemented ()
+
+
+// Implement traverse for validation. (You're going to need it shortly!)
+let traverseValidation : ('a -> Validation<'b, 'e>) -> 'a list -> Validation<'b list, 'e> =
+  fun fn xs ->
+    notImplemented ()
+
+
+// Write a function that can create a Result from a Validation
+let resultFromValidation : Validation<'a, 'e> -> Result<'a, 'e Set> =
+  fun validation ->
+    notImplemented ()
+
+
+// Implement a function that can validate a sequence of lines to ensure they are all
+// non-empty. If any are non-empty, we should return an Error EmptyLines containing
+// all the empty line numbers.
+// HINT: You'll want to use Seq.mapi, and the functions you just defined above
+let validateAllLinesAreNonEmpty : string seq -> Result<string list, Error> =
+  fun lines ->
+    notImplemented ()
+
+
+// Implement a function that counts the number of words in a line of text
+let countWordsInLine : string -> int =
+  fun line ->
+    notImplemented ()
+
+
+// Implement a function that takes a sequence of lines, counts the words in each one
+// then writes out each count number onto a different line in a single big string.
+// eg. wordCountsPerLine ["this is"; "getting more complex"; "but challenge is good"] = "2\r\n3\r\n4"
+let wordCountsPerLine : string seq -> string =
+  fun lines ->
+    notImplemented ()
+
+
+// Let's now implement our main function, composing all our functions together.
+// Remember, we want a function that:
+// - Reads from UTF-8 text from a file and breaks it into lines
+// - Validates that each line is not empty
+// - Counts the number of words on each line
+// - Writes these counts out to another file
+// HINT: You're going to need the functions you implemented before, plus
+// your AsyncResult bind function to do this!
+let readFileAndSaveLineWordCounts : string -> string -> AsyncResult<unit, Error> =
+  fun inputFilename outputFilename ->
+    notImplemented ()
+
+
+// We can implement our own computation expression for AsyncResult to make using it
+// less noisy.
+// To read all about how computation expressions work, check out the documentation:
+// https://docs.microsoft.com/en-us/dotnet/fsharp/language-reference/computation-expressions
+// One vary rarely does this one's-self (one usually gets things like AsyncResult from libraries!)
+// but let's go ahead and implement a very simple computation expression for AsyncResult.
+// You'll need to implement the notImplemented () methods on the AsyncResultBuilder class below.
+type AsyncResultBuilder () =
+  member _this.Bind (x : AsyncResult<'a, 'e>, fn : 'a -> AsyncResult<'b, 'e>) : AsyncResult<'b, 'e> =
+    notImplemented ()
+
+  member _this.Return (x : 'a) : AsyncResult<'a, 'e> =
+    notImplemented ()
+
+  member _this.ReturnFrom (x : AsyncResult<'a, 'e>) : AsyncResult<'a, 'e> =
+    x
+
+  member _this.Zero () : AsyncResult<unit, 'e> =
+    notImplemented ()
+
+let asyncResult = AsyncResultBuilder ()
+
+
+// Now let's use our new computation expression to rewrite readFileAndSaveLineWordCounts
+// using let bangs!
+let readFileAndSaveLineWordCountsWithComputationExpression : string -> string -> AsyncResult<unit, Error> =
+  fun inputFilename outputFilename -> asyncResult {
+    notImplemented ()
+  }
+
+
 // TODO: Reader monad
